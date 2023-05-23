@@ -1,0 +1,114 @@
+import sqlalchemy as db
+engine =db.create_engine('mysql+mysqlconnector://root:@localhost/etivity')
+from sqlalchemy import create_engine, MetaData, Table, Column, Integer, String, Date, insert, update, delete ,ForeignKey
+meta = MetaData()
+
+# CREAZIONE TABELLA COMUNE
+
+Comune = Table(
+   'Comune', meta, 
+   Column('CAP', Integer, nullable=False ,autoincrement=False, primary_key = True), 
+   Column('Provincia', String(2), nullable=False), 
+   Column('NomeComune', String(255), nullable=False),
+)
+
+# Creazione Tabella Cliente
+Cliente = Table(
+   'Cliente', meta, 
+   Column('CODICEFISCALE', String(255), nullable=False , primary_key = True),
+   Column('Residenza', Integer, ForeignKey("Comune.CAP"), nullable=False),  
+   Column('Nome', String(255), nullable=False),    
+   Column('Cognome', String(255), nullable=False), 
+   Column('Telefono', String(255), nullable=False), 
+)
+
+#Creazione Tabella Modello 
+Modello = Table(
+   'Modello', meta, 
+   Column('ID', Integer, nullable=False ,autoincrement=True, primary_key = True),
+   Column('Marca', String(255), nullable=False),   
+   Column('Allestimento', String(255), nullable=False),    
+   Column('Anno', Integer, nullable=False),    
+   Column('Alimentazione', String(255), nullable=False),
+   Column('Cilindrata', Integer, nullable=False),   
+   Column('KW', Integer, nullable=False),    
+)
+    
+
+
+#Creazione Tabella Veicolo
+Veicolo = Table(
+   'Veicolo', meta, 
+   Column('Targa', String(10), nullable=False , primary_key = True),
+   Column('Telaio', Integer, nullable=False),   
+   Column('Modello', Integer, ForeignKey("Modello.ID") ,nullable=False),    
+   Column('Proprietario', String(255), ForeignKey("Cliente.CODICEFISCALE") ,nullable=False),        
+)
+
+#Creazione Tabella Movimentazione 
+Movimentazione = Table(
+   'Movimentazione', meta, 
+   Column('NumMovimentazione', Integer, nullable=False, autoincrement=False, primary_key = True),
+   Column('targa', String(10), ForeignKey("Veicolo.Targa"), nullable=False),
+   Column('Causale', String(255), nullable=False),
+   Column('TipoEmissione', String(255), nullable=False),
+   Column('ProvinciaEmissione', Integer, ForeignKey("Comune.CAP"),  nullable=False),        
+)
+
+# Creazione Tabella Assicuratore
+Assicuratore = Table(
+   'Assicuratore', meta, 
+   Column('NumIscrizione', Integer, nullable=False, autoincrement=False, primary_key = True),
+   Column('CodiceFiscale', String(255), ForeignKey("Cliente.CODICEFISCALE") ,nullable=False),   
+   Column('Sezione', String(255), nullable=False),
+   Column('DataIscrizione', Date, nullable=False),
+       
+)
+
+#Creazione Tabella Assicurazione
+Assicurazione = Table(
+   'Assicurazione', meta, 
+   Column('PartitaIVA', Integer, nullable=False, autoincrement=False, primary_key = True),
+   Column('RagioneSociale', String(255) ,nullable=False),   
+   Column('Email', String(255), nullable=False),
+   Column('Telefono', Date, nullable=False),       
+)
+
+#Creazione tabella Iscritto
+Iscritto = Table(
+   'Iscritto', meta, 
+   Column('ID', Integer, nullable=False, autoincrement=True, primary_key = True),
+   Column('DataIscrizione', Date ,nullable=False),   
+   Column('NumeroIscrizione', Integer , ForeignKey("Assicuratore.NumIscrizione"), nullable=False),
+   Column('Assicurazione', Integer, ForeignKey("Assicurazione.PartitaIVA") ,nullable=False),       
+)
+
+#Creazione Tabella Copertura
+Copertura = Table(
+   'Copertura', meta, 
+   Column('NumeroPolizza', Integer, nullable=False, autoincrement=False, primary_key = True),
+   Column('targa', String(10), ForeignKey("Veicolo.Targa") ,nullable=False),   
+   Column('Effetto', Date , nullable=False),
+   Column('Scadenza', Date , nullable=False),
+   Column('Intermediario', Integer, ForeignKey("Assicuratore.NumIscrizione"), nullable=False), 
+   Column('Compagnia', Integer, ForeignKey("Assicurazione.PartitaIVA"), nullable=False),
+)
+
+meta.create_all(engine)
+
+#Inserimento dei Dati di esempio 
+conn = engine.connect()
+conn.execute(Comune.insert(), [{'CAP':'88900', 'Provincia':'KR', 'NomeComune':'Crotone'}, {'CAP':'87100', 'Provincia':'CS', 'NomeComune':'Cosenza'},{'CAP':'88100', 'Provincia':'CZ', 'NomeComune':'Catanzaro'},])
+
+#Aggiornamenti Dati 
+upd =Comune.update().where(Comune.c.Provincia=='KR').values(Provincia='CZ')
+conn.execute(upd)
+
+#Eliminazione dati
+rem = Comune.delete().where(Comune.c.Provincia =='CZ')
+conn.execute(rem)
+
+#Select
+Sl = Comune.select().where(Comune.c.NomeComune.startswith('C%'))
+result = conn.execute(Sl)
+
